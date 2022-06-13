@@ -1,0 +1,10 @@
+name = "FESolvers"
+uuid = "c284aa9b-314e-492b-a088-c276a12d68a4"
+authors = ["Maximilian Köhler <maximilian.koehler@ruhr-uni-bochum.de>"]
+version = "0.1.0"
+
+[deps]
+Ferrite = "c061ca5d-56c9-439f-9c0e-210fe06d3992"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
