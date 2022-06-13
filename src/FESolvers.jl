@@ -39,8 +39,6 @@ struct QuasiStaticNewton{linsolve <: Function} <: AbstractSolver
     restol::Float64
 end
 
-getincrement(::AbstractFEBuffer) = ()
-
 function solve(model::AbstractFEModel,solver::QuasiStaticNewton)
     print_progress = print(model)
     print_progress ? TimerOutputs.enable_timer!(TimerOutputs.get_defaulttimer()) : TimerOutputs.disable_timer!(TimerOutputs.get_defaulttimer())
@@ -55,7 +53,7 @@ function solve(model::AbstractFEModel,solver::QuasiStaticNewton)
     K = getstiffnessmatrix(febuffer)
     f = getrhs(febuffer)
     u = getcurrentsolution(febuffer)
-    Δu = getincrement(febuffer)
+    Δu = zero(u)
     dbcs = getdirichletconstraints(model)
  
     for t in timeinterval
@@ -63,12 +61,12 @@ function solve(model::AbstractFEModel,solver::QuasiStaticNewton)
         converged = false
 
         update!(dbcs, t)
-        apply!(model, dbcs)
-        apply_neumann!(model,febuffer,t)
-        print_progress && (prog = ProgressMeter.ProgressThresh(globaldata.solver.restol, "Solving timestep $(t):", 1))
+        apply!(u, dbcs)
+        print_progress && (prog = ProgressMeter.ProgressThresh(solver.restol, "Solving timestep $(t):", 1))
         while !converged 
             newton_itr += 1
             assemble!(model,febuffer)    
+            apply_neumann!(model,febuffer,t)
             apply_zero!(K,f,dbcs)
             norm_residual = norm(f[free_dofs(dbcs)])
 
@@ -77,16 +75,21 @@ function solve(model::AbstractFEModel,solver::QuasiStaticNewton)
             elseif newton_itr > solver.maxitr
                 error("Newton without convergence")
             end
-
             Δu .= solver.linearsolver(K,f)
             u .-= Δu
             print_progress && ProgressMeter.update!(prog, norm_residual; showvalues=[(:iter, newton_itr), (:Δunorm, norm(Δu))])
         end
         converged_callback(model,febuffer)
-        export_callback(model,febuffer)
-        print_progress && ProgressMeter.next!(p, showvalues=[(:t, t),(:maxu, maximum(abs.(u)))])
- 
+        export_callback(model,febuffer,exportbuffer)
+        print_progress && ProgressMeter.next!(p, showvalues=[(:t, t),(:maxu, maximum(abs.(u)))]) 
     end
+    return exportbuffer
 end
+
+export  QuasiStaticNewton,
+        solve,
+        AbstractFEBuffer,
+        AbstractExportBuffer,
+        AbstractFEModel
 
 end
